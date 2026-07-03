@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>B站模拟经营游戏雷达</title>
+<style>
+  :root {
+    --bg: #0f1116;
+    --panel: #171a21;
+    --panel-2: #1e222b;
+    --border: #2a2f3a;
+    --text: #e6e9ef;
+    --muted: #9aa3b2;
+    --accent: #4ea1ff;
+    --core: #ffb454;
+    --adjacent: #8b93a7;
+    --high: #3ddc84;
+    --medium: #ffcf5c;
+    --low: #6b7280;
+    --rising: #3ddc84;
+    --burst: #ff6b6b;
+    --stable: #4ea1ff;
+    --decaying: #9aa3b2;
+    --chip: #232833;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+  }
+  header {
+    padding: 28px 24px 18px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #14171e 0%, var(--bg) 100%);
+  }
+  h1 { margin: 0 0 6px; font-size: 24px; letter-spacing: .5px; }
+  .sub { color: var(--muted); font-size: 14px; }
+  .sub b { color: var(--accent); }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+  .toolbar {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    padding: 16px 0; position: sticky; top: 0; background: var(--bg);
+    z-index: 5; border-bottom: 1px solid var(--border);
+  }
+  .toolbar .grow { flex: 1; }
+  select, input[type="search"] {
+    background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 12px; font-size: 14px; outline: none;
+  }
+  input[type="search"] { width: 220px; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .seg button {
+    background: var(--panel-2); color: var(--muted); border: none; padding: 8px 14px;
+    font-size: 13px; cursor: pointer;
+  }
+  .seg button.active { background: var(--accent); color: #0b0d12; font-weight: 600; }
+  main { padding: 20px 0 60px; }
+  .week-group { margin-bottom: 34px; }
+  .week-head {
+    display: flex; align-items: baseline; gap: 12px; margin: 8px 0 14px;
+    padding-bottom: 8px; border-bottom: 1px dashed var(--border);
+  }
+  .week-head h2 { margin: 0; font-size: 18px; }
+  .week-meta { color: var(--muted); font-size: 12.5px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .card-top { display: flex; align-items: flex-start; gap: 8px; }
+  .card-top h3 { margin: 0; font-size: 16px; flex: 1; }
+  .tag { font-size: 11px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+  .tag.core { background: rgba(255,180,84,.15); color: var(--core); border: 1px solid rgba(255,180,84,.4); }
+  .tag.adjacent { background: rgba(139,147,167,.15); color: var(--adjacent); border: 1px solid rgba(139,147,167,.4); }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; }
+  .chip { background: var(--chip); border: 1px solid var(--border); border-radius: 6px; padding: 2px 8px; color: var(--muted); }
+  .chip.type { color: var(--text); }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+  .conf-high { color: var(--high); } .conf-high .dot { background: var(--high); }
+  .conf-medium { color: var(--medium); } .conf-medium .dot { background: var(--medium); }
+  .conf-low { color: var(--low); } .conf-low .dot { background: var(--low); }
+  .trend-rising { color: var(--rising); } .trend-burst { color: var(--burst); }
+  .trend-stable { color: var(--stable); } .trend-decaying { color: var(--decaying); }
+  .sig { display: flex; flex-direction: column; gap: 4px; }
+  .sig-title { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .sig-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .sig-item { font-size: 12px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; }
+  .sig-item.design { border-left: 2px solid var(--core); }
+  .sig-item.market { border-left: 2px solid var(--accent); }
+  .discuss { font-size: 13px; color: var(--text); }
+  .action { font-size: 12.5px; color: var(--accent); }
+  details.videos { border-top: 1px solid var(--border); padding-top: 8px; }
+  details.videos summary { cursor: pointer; color: var(--muted); font-size: 12.5px; }
+  .vid { font-size: 12px; padding: 6px 0; border-bottom: 1px dashed var(--border); }
+  .vid a { color: var(--accent); text-decoration: none; }
+  .vid a:hover { text-decoration: underline; }
+  .vid .stats { color: var(--muted); }
+  .empty { color: var(--muted); text-align: center; padding: 60px 0; }
+  footer { border-top: 1px solid var(--border); padding: 18px 0; color: var(--muted); font-size: 12.5px; }
+  footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>🏗️ B站模拟经营游戏雷达</h1>
+    <div class="sub">
+      每周一扫描过去 14~7 天的 B站模拟经营相关视频 · 累计
+      <b><span id="week-count">0</span></b> 周 /
+      <b><span id="game-count">0</span></b> 个游戏条目 ·
+      设计灵感与市场热度并重
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="toolbar">
+    <div class="seg" id="scope-seg">
+      <button data-scope="all" class="active">全部</button>
+      <button data-scope="core">核心</button>
+      <button data-scope="adjacent">外延</button>
+    </div>
+    <div class="seg" id="conf-seg">
+      <button data-conf="all" class="active">全部置信</button>
+      <button data-conf="high">高</button>
+      <button data-conf="medium">中</button>
+      <button data-conf="low">低/噪声</button>
+    </div>
+    <select id="week-select"><option value="all">全部周</option></select>
+    <div class="grow"></div>
+    <input type="search" id="search" placeholder="搜索游戏名 / 讨论点…" />
+  </div>
+
+  <main id="app"></main>
+
+  <footer>
+    <div class="wrap" style="padding:0">
+      数据源：<code>data.json</code>（<code>scripts/merge.mjs</code> 机械回填，禁止手工编辑数据区）·
+      仅发布到 GitHub <a href="https://github.com/archili2035/SimGame">archili2035/SimGame</a> ·
+      Pages <a href="https://archili2035.github.io/SimGame/">在线页面</a>
+    </div>
+  </footer>
+</div>
+
+<script>
+/*DATA:START*/
+const DATA = {"weeks":[],"games":[]};
+/*DATA:END*/
+
+const state = { scope: "all", conf: "all", week: "all", q: "" };
+const CONF_LABEL = { high: "高", medium: "中", low: "低" };
+const TREND_LABEL = { rising: "上升", burst: "爆发", stable: "稳定", decaying: "衰减" };
+
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"]/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+function num(n) {
+  if (n == null || n === "") return "—";
+  const v = Number(n);
+  if (isNaN(v)) return esc(n);
+  if (v >= 10000) return (v / 10000).toFixed(1) + "万";
+  return String(v);
+}
+
+function initWeekSelect() {
+  const sel = document.getElementById("week-select");
+  DATA.weeks.forEach((w) => {
+    const o = document.createElement("option");
+    o.value = w.week;
+    o.textContent = `${w.week}（${w.generated}｜${w.count} 个）`;
+    sel.appendChild(o);
+  });
+}
+
+function bvUrl(bv) {
+  if (!bv) return "#";
+  return /^https?:/.test(bv) ? bv : `https://www.bilibili.com/video/${bv}`;
+}
+
+function gameCard(g) {
+  const scopeTag = g.scope === "core"
+    ? '<span class="tag core">核心</span>'
+    : '<span class="tag adjacent">外延</span>';
+  const trend = g.trend
+    ? `<span class="chip trend-${g.trend}">趋势·${TREND_LABEL[g.trend] || g.trend}</span>` : "";
+  const design = (g.design || []).map((d) =>
+    `<span class="sig-item design" title="${esc(d.note || "")}">${esc(d.label)}</span>`).join("");
+  const market = (g.market || []).map((m) =>
+    `<span class="sig-item market" title="${esc(m.note || "")}">${esc(m.label)}</span>`).join("");
+  const videos = (g.videos || []).map((v) => `
+    <div class="vid">
+      <a href="${bvUrl(v.bv)}" target="_blank" rel="noopener">${esc(v.title || v.bv)}</a>
+      <div class="stats">${esc(v.up || "")}${v.pub ? " · " + esc(v.pub) : ""}
+        · 播放 ${num(v.view)} · 点赞 ${num(v.like)} · 收藏 ${num(v.fav)} · 评论 ${num(v.reply)}</div>
+    </div>`).join("");
+
+  return `
+  <div class="card">
+    <div class="card-top">
+      <h3>${esc(g.name)}</h3>
+      ${scopeTag}
+    </div>
+    <div class="meta-row">
+      ${g.type ? `<span class="chip type">${esc(g.type)}</span>` : ""}
+      <span class="chip conf-${g.confidence}"><span class="dot"></span>置信·${CONF_LABEL[g.confidence] || g.confidence}</span>
+      ${trend}
+      ${g.heat ? `<span class="chip">热度·${esc(g.heat)}</span>` : ""}
+    </div>
+    ${design ? `<div class="sig"><span class="sig-title">设计灵感</span><div class="sig-list">${design}</div></div>` : ""}
+    ${market ? `<div class="sig"><span class="sig-title">市场热度</span><div class="sig-list">${market}</div></div>` : ""}
+    ${g.discuss ? `<div class="discuss">💬 ${esc(g.discuss)}</div>` : ""}
+    ${g.action ? `<div class="action">→ ${esc(g.action)}</div>` : ""}
+    ${videos ? `<details class="videos"><summary>来源视频 ${(g.videos || []).length} 条</summary>${videos}</details>` : ""}
+  </div>`;
+}
+
+function render() {
+  const app = document.getElementById("app");
+  const q = state.q.trim().toLowerCase();
+  const weeks = DATA.weeks.filter((w) => state.week === "all" || w.week === state.week);
+
+  let html = "";
+  let shown = 0;
+  weeks.forEach((w) => {
+    let games = DATA.games.filter((g) => g.week === w.week);
+    if (state.scope !== "all") games = games.filter((g) => g.scope === state.scope);
+    if (state.conf !== "all") games = games.filter((g) => g.confidence === state.conf);
+    if (q) games = games.filter((g) =>
+      (g.name || "").toLowerCase().includes(q) ||
+      (g.discuss || "").toLowerCase().includes(q));
+    if (!games.length) return;
+    shown += games.length;
+    const sc = w.scan || {};
+    html += `
+      <div class="week-group">
+        <div class="week-head">
+          <h2>${esc(w.week)}</h2>
+          <span class="week-meta">报告 ${esc(w.generated)}
+            ${sc.window ? "· 窗口 " + esc(sc.window) : ""}
+            ${sc.detail ? "· 取详情 " + esc(sc.detail) : ""}
+            · ${games.length} 个游戏</span>
+        </div>
+        <div class="grid">${games.map(gameCard).join("")}</div>
+      </div>`;
+  });
+
+  app.innerHTML = shown ? html : `<div class="empty">暂无符合条件的记录。首次运行后由周扫描自动填充。</div>`;
+}
+
+function bindSeg(id, key) {
+  document.getElementById(id).addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    document.querySelectorAll(`#${id} button`).forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    state[key] = btn.dataset[key === "scope" ? "scope" : "conf"];
+    render();
+  });
+}
+
+initWeekSelect();
+bindSeg("scope-seg", "scope");
+bindSeg("conf-seg", "conf");
+document.getElementById("week-select").addEventListener("change", (e) => {
+  state.week = e.target.value; render();
+});
+document.getElementById("search").addEventListener("input", (e) => {
+  state.q = e.target.value; render();
+});
+render();
+</script>
+</body>
+</html>
