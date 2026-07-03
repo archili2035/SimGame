@@ -215,7 +215,7 @@ function gameCard(g) {
     ${market ? `<div class="sig"><span class="sig-title">市场热度</span><div class="sig-list">${market}</div></div>` : ""}
     ${g.discuss ? `<div class="discuss">💬 ${esc(g.discuss)}</div>` : ""}
     ${g.action ? `<div class="action">→ ${esc(g.action)}</div>` : ""}
-    ${videos ? `<details class="videos"><summary>来源视频 ${(g.videos || []).length} 条</summary>${videos}</details>` : ""}
+    ${videos ? `<details class="videos" open><summary>来源视频 ${(g.videos || []).length} 条</summary>${videos}</details>` : ""}
   </div>`;
 }
 
